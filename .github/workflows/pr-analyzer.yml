@@ -1,0 +1,91 @@
+name: PR Code Analysis
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout PR Analyzer
+        uses: actions/checkout@v4
+        with:
+          repository: isn90/pr-analyzer
+          path: pr-analyzer
+
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+        with:
+          path: repo
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install PR Analyzer dependencies
+        run: |
+          cd pr-analyzer
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Debug - Check Token Availability
+        run: |
+          echo "Checking token sources..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Event name: ${{ github.event_name }}"
+          
+          # Check APP_SECRET_TOKEN
+          if [ -n "$APP_TOKEN" ]; then
+            echo "✅ APP_SECRET_TOKEN is available (length: ${#APP_TOKEN})"
+            echo "   Prefix: ${APP_TOKEN:0:10}..."
+            echo "FINAL_TOKEN=$APP_TOKEN" >> $GITHUB_ENV
+          else
+            echo "❌ APP_SECRET_TOKEN is NOT available"
+          fi
+          
+          # Check default github.token
+          if [ -n "$DEFAULT_TOKEN" ]; then
+            echo "✅ github.token is available (length: ${#DEFAULT_TOKEN})"
+            echo "   Prefix: ${DEFAULT_TOKEN:0:10}..."
+            if [ -z "$APP_TOKEN" ]; then
+              echo "📌 Will use: github.token (fallback for same-repo testing)"
+              echo "FINAL_TOKEN=$DEFAULT_TOKEN" >> $GITHUB_ENV
+            fi
+          else
+            echo "❌ github.token is NOT available"
+          fi
+          
+          # Verify we have a token
+          if [ -z "${FINAL_TOKEN:-}" ] && [ -z "$APP_TOKEN" ] && [ -z "$DEFAULT_TOKEN" ]; then
+            echo "❌ ERROR: No token available!"
+            exit 1
+          fi
+        env:
+          APP_TOKEN: ${{ secrets.APP_SECRET_TOKEN }}
+          DEFAULT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run PR Analysis
+        working-directory: pr-analyzer
+        run: python main.py
+        env:
+          # Azure OpenAI Configuration
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          
+          # GitHub Configuration
+          GITHUB_TOKEN: ${{ secrets.APP_SECRET_TOKEN }}
+          BUILD_REPOSITORY_PROVIDER: "GitHub"
+          BUILD_REPOSITORY_NAME: ${{ github.repository }}
+          SYSTEM_PULLREQUEST_PULLREQUESTID: ${{ github.event.pull_request.number }}
+          
+          # GitHub Context
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}

@@ -1,0 +1,22 @@
+# In other repositories - standalone PR Analyzer trigger
+stages:
+  - analyze
+
+pr_analyzer:
+  stage: analyze
+  image: python:3.12
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  
+  before_script:
+    - git clone https://autocode.git.epam.com/shivshankar_natarajan/pr-analyzer.git /tmp/pr-analyzer
+    - cd /tmp/pr-analyzer
+    - pip install -r requirements.txt
+  
+  script:
+    - cd /tmp/pr-analyzer
+    - python main.py
+  
+  variables:
+    BUILD_REPOSITORY_PROVIDER: "GitLab"
+    SYSTEM_PULLREQUEST_PULLREQUESTID: $CI_MERGE_REQUEST_IID

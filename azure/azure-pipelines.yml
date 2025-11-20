@@ -1,0 +1,35 @@
+name: PR Code Analysis (Azure DevOps)
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+pr:
+  branches:
+    include:
+      - '*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  python.version: '3.9'
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+    displayName: 'Setup Python'
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+    displayName: 'Install dependencies'
+
+  - script: |
+      python pr_analyzer.py
+    displayName: 'Run PR Analysis'
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
