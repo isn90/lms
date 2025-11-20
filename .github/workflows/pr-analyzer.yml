@@ -34,17 +34,41 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Validate GitHub Token
+      - name: Debug - Check Token Availability
         run: |
-          if [ -z "$GITHUB_TOKEN" ]; then
-            echo "❌ ERROR: GITHUB_TOKEN is empty or not set"
-            exit 1
+          echo "Checking token sources..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Event name: ${{ github.event_name }}"
+          
+          # Check APP_SECRET_TOKEN
+          if [ -n "$APP_TOKEN" ]; then
+            echo "✅ APP_SECRET_TOKEN is available (length: ${#APP_TOKEN})"
+            echo "   Prefix: ${APP_TOKEN:0:10}..."
+            echo "FINAL_TOKEN=$APP_TOKEN" >> $GITHUB_ENV
           else
-            echo "✅ GITHUB_TOKEN is set (length: ${#GITHUB_TOKEN} characters)"
-            echo "✅ Token prefix: ${GITHUB_TOKEN:0:4}..."
+            echo "❌ APP_SECRET_TOKEN is NOT available"
+          fi
+          
+          # Check default github.token
+          if [ -n "$DEFAULT_TOKEN" ]; then
+            echo "✅ github.token is available (length: ${#DEFAULT_TOKEN})"
+            echo "   Prefix: ${DEFAULT_TOKEN:0:10}..."
+            if [ -z "$APP_TOKEN" ]; then
+              echo "📌 Will use: github.token (fallback for same-repo testing)"
+              echo "FINAL_TOKEN=$DEFAULT_TOKEN" >> $GITHUB_ENV
+            fi
+          else
+            echo "❌ github.token is NOT available"
+          fi
+          
+          # Verify we have a token
+          if [ -z "${FINAL_TOKEN:-}" ] && [ -z "$APP_TOKEN" ] && [ -z "$DEFAULT_TOKEN" ]; then
+            echo "❌ ERROR: No token available!"
+            exit 1
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.APP_SECRET_TOKEN }}
+          APP_TOKEN: ${{ secrets.APP_SECRET_TOKEN }}
+          DEFAULT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run PR Analysis
         working-directory: pr-analyzer
@@ -65,4 +89,3 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_HEAD_REF: ${{ github.head_ref }}
           GITHUB_BASE_REF: ${{ github.base_ref }}
-          
