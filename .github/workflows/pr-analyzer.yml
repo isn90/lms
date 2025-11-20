@@ -43,7 +43,7 @@ jobs:
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
           AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
           
-          echo "Token prefix: ${APP_SECRET_TOKEN}..."
+          echo "Token prefix: ${{ secrets.APP_SECRET_TOKEN }}..."
           # GitHub Configuration
           GITHUB_TOKEN: ${{ secrets.APP_SECRET_TOKEN }}
           BUILD_REPOSITORY_PROVIDER: "GitHub"
@@ -54,4 +54,3 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_HEAD_REF: ${{ github.head_ref }}
           GITHUB_BASE_REF: ${{ github.base_ref }}
-          
