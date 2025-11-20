@@ -34,6 +34,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Validate GitHub Token
+        run: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ ERROR: GITHUB_TOKEN is empty or not set"
+            exit 1
+          else
+            echo "✅ GITHUB_TOKEN is set (length: ${#GITHUB_TOKEN} characters)"
+            echo "✅ Token prefix: ${GITHUB_TOKEN:0:4}..."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_SECRET_TOKEN }}
+
       - name: Run PR Analysis
         working-directory: pr-analyzer
         run: python main.py
@@ -43,7 +55,6 @@ jobs:
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
           AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
           
-          echo "Token prefix: ${{ secrets.APP_SECRET_TOKEN }}..."
           # GitHub Configuration
           GITHUB_TOKEN: ${{ secrets.APP_SECRET_TOKEN }}
           BUILD_REPOSITORY_PROVIDER: "GitHub"
